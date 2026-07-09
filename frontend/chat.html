@@ -8,6 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Markdown + Syntax Highlighting + XSS Protection -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a1a;
@@ -281,6 +286,184 @@
 
         /* Drag-over highlight on chat area */
         .messages-container.drag-over { outline: 2px dashed var(--accent-purple); outline-offset: -4px; }
+
+        /* ── Streaming & Markdown Styles ──────────────────────────── */
+
+        /* Streaming cursor */
+        .message-bubble.streaming::after {
+            content: '▊';
+            animation: cursorBlink 0.8s step-end infinite;
+            color: var(--accent-purple);
+            font-weight: 300;
+            margin-left: 1px;
+        }
+        @keyframes cursorBlink { 50% { opacity: 0; } }
+
+        /* Tool card streaming (in-progress) state */
+        .tool-call-card .tool-spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(34, 197, 94, 0.25);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        .tool-call-card .tool-status-icon {
+            font-size: 14px;
+            animation: fadeScale 0.3s ease;
+        }
+        @keyframes fadeScale { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+
+        .tool-call-card.streaming-tool {
+            border-color: rgba(245, 158, 11, 0.35);
+            background: rgba(245, 158, 11, 0.06);
+            animation: toolPulse 2s ease-in-out infinite;
+        }
+        @keyframes toolPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+            50% { box-shadow: 0 0 8px 2px rgba(245, 158, 11, 0.1); }
+        }
+
+        .tool-calls-summary {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+
+        /* Markdown in agent message bubbles */
+        .message.agent .message-bubble h1,
+        .message.agent .message-bubble h2,
+        .message.agent .message-bubble h3,
+        .message.agent .message-bubble h4 {
+            margin: 14px 0 6px;
+            line-height: 1.3;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+        .message.agent .message-bubble h1:first-child,
+        .message.agent .message-bubble h2:first-child,
+        .message.agent .message-bubble h3:first-child { margin-top: 0; }
+        .message.agent .message-bubble h1 { font-size: 1.3em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .message.agent .message-bubble h2 { font-size: 1.15em; }
+        .message.agent .message-bubble h3 { font-size: 1.05em; }
+        .message.agent .message-bubble h4 { font-size: 1em; color: var(--text-secondary); }
+
+        .message.agent .message-bubble p { margin: 6px 0; }
+        .message.agent .message-bubble p:first-child { margin-top: 0; }
+        .message.agent .message-bubble p:last-child { margin-bottom: 0; }
+
+        .message.agent .message-bubble ul,
+        .message.agent .message-bubble ol {
+            padding-left: 22px;
+            margin: 6px 0;
+        }
+        .message.agent .message-bubble li { margin: 3px 0; line-height: 1.5; }
+
+        .message.agent .message-bubble blockquote {
+            border-left: 3px solid var(--accent-purple);
+            padding: 6px 14px;
+            margin: 8px 0;
+            color: var(--text-secondary);
+            background: rgba(124, 58, 237, 0.06);
+            border-radius: 0 6px 6px 0;
+        }
+
+        .message.agent .message-bubble table {
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 12px;
+            width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
+        .message.agent .message-bubble th,
+        .message.agent .message-bubble td {
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            text-align: left;
+        }
+        .message.agent .message-bubble th {
+            background: rgba(124, 58, 237, 0.1);
+            font-weight: 600;
+        }
+
+        .message.agent .message-bubble hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 12px 0;
+        }
+
+        .message.agent .message-bubble strong { font-weight: 600; color: #f1f5f9; }
+        .message.agent .message-bubble em { font-style: italic; }
+
+        .message.agent .message-bubble a {
+            color: #a78bfa;
+            text-decoration: underline;
+            text-decoration-color: rgba(167, 139, 250, 0.4);
+        }
+        .message.agent .message-bubble a:hover { color: var(--accent-purple); text-decoration-color: var(--accent-purple); }
+
+        /* Code blocks with syntax highlighting */
+        .message.agent .message-bubble pre {
+            position: relative;
+            background: #0d1117 !important;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 32px 14px 14px;
+            margin: 8px 0;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre;
+        }
+        .message.agent .message-bubble pre code {
+            background: none !important;
+            padding: 0 !important;
+            border-radius: 0;
+            font-size: 12px;
+            color: #e6edf3;
+        }
+        .message.agent .message-bubble code {
+            background: rgba(124, 58, 237, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88em;
+            color: #e2b3ff;
+        }
+
+        .code-lang-label {
+            position: absolute;
+            top: 8px;
+            left: 14px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy-btn {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            padding: 3px 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.06);
+            color: var(--text-dim);
+            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 2;
+        }
+        .message.agent .message-bubble pre:hover .code-copy-btn { opacity: 1; }
+        .code-copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+        .code-copy-btn.copied { color: var(--accent-green); border-color: rgba(34,197,94,0.3); }
     </style>
 </head>
 <body>
@@ -463,9 +646,23 @@
             input.value = '';
             autoResize(input);
 
-            setStatus('🧠 Thinking & using tools...');
             document.getElementById('sendBtn').disabled = true;
 
+            // If images attached → POST (streaming doesn't support vision)
+            // Otherwise → SSE streaming for real-time response
+            if (imagesToSend.length > 0) {
+                await sendMessagePost(message, imagesToSend);
+            } else {
+                await sendMessageStream(message);
+            }
+
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+        }
+
+        /* ── POST fallback (used when images attached) ────────────── */
+        async function sendMessagePost(message, imagesToSend) {
+            setStatus('🧠 Thinking & using tools...');
             try {
                 const payload = {
                     message: message || '(see attached image)',
@@ -476,7 +673,7 @@
                 if (Object.keys(mcpUserConfigs).length > 0) {
                     payload.mcp_configs = mcpUserConfigs;
                 }
-                if (imagesToSend.length > 0) {
+                if (imagesToSend && imagesToSend.length > 0) {
                     payload.images = imagesToSend.map(img => ({
                         data: img.data,
                         media_type: img.media_type,
@@ -497,23 +694,289 @@
                 const data = await res.json();
                 conversationId = data.conversation_id;
 
-                // Update MCP badge with connected count
                 if (data.mcps_connected > 0) {
                     const badge = document.getElementById('mcpBadge');
                     badge.textContent = `🟢 ${data.mcps_connected} MCP(s) active`;
                     badge.classList.remove('none');
                 }
 
-                // Show tool calls + response
                 addAgentMessage(data.response, data.tool_calls || [], data.iterations);
-
             } catch (e) {
                 addMessage(`❌ Error: ${e.message}`, 'agent');
             } finally {
                 clearStatus();
-                document.getElementById('sendBtn').disabled = false;
-                input.focus();
             }
+        }
+
+        /* ── SSE Streaming (real-time response) ───────────────────── */
+        async function sendMessageStream(message) {
+            setStatus('🧠 Thinking...');
+
+            const { messageDiv, toolContainer, textBubble, toolSummary } = createStreamingMessage();
+            let collectedText = '';
+            let toolCallsLog = [];
+            let toolCardMap = {};
+            let toolIndex = 0;
+
+            try {
+                const payload = {
+                    message: message,
+                    conversation_id: conversationId,
+                    llm_provider: document.getElementById('chatLlmProvider').value,
+                };
+                if (selectedModel) payload.model = selectedModel;
+                if (Object.keys(mcpUserConfigs).length > 0) {
+                    payload.mcp_configs = mcpUserConfigs;
+                }
+
+                const res = await fetch(`${API_BASE}/chat/${taskId}/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `Stream failed (${res.status})`);
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed.startsWith('data:')) continue;
+                        const jsonStr = trimmed.slice(5).trim();
+                        if (!jsonStr) continue;
+
+                        let event;
+                        try { event = JSON.parse(jsonStr); } catch { continue; }
+
+                        switch (event.type) {
+                            case 'tool_start': {
+                                const cardId = `stream-tool-${toolIndex++}`;
+                                const card = insertStreamingToolCard(toolContainer, event.tool, event.args, cardId);
+                                toolCardMap[cardId] = card;
+                                toolCallsLog.push({
+                                    tool: event.tool, args: event.args || {},
+                                    result: '', success: true, _cardId: cardId,
+                                });
+                                toolSummary.style.display = 'block';
+                                toolSummary.textContent = `🔧 Using tools... (${toolCallsLog.length} so far)`;
+                                setStatus(`🔧 Using ${event.tool}...`);
+                                scrollToBottom();
+                                break;
+                            }
+                            case 'tool_end': {
+                                const tc = [...toolCallsLog].reverse().find(
+                                    t => t.tool === event.tool && !t.result
+                                );
+                                if (tc) {
+                                    tc.result = event.result || '(no output)';
+                                    tc.success = event.success !== false;
+                                    if (toolCardMap[tc._cardId]) {
+                                        updateStreamingToolCard(
+                                            toolCardMap[tc._cardId], tc.result, tc.success
+                                        );
+                                    }
+                                }
+                                setStatus('🧠 Thinking...');
+                                break;
+                            }
+                            case 'text': {
+                                const chunk = event.content || '';
+                                if (chunk) {
+                                    setStatus('✍️ Writing response...');
+                                    textBubble.style.display = 'block';
+                                    collectedText += chunk;
+                                    typewriterAppend(textBubble, chunk);
+                                    scrollToBottom();
+                                }
+                                break;
+                            }
+                            case 'done': {
+                                conversationId = event.conversation_id || conversationId;
+                                break;
+                            }
+                            case 'error':
+                                throw new Error(event.message || 'Agent error');
+                        }
+                    }
+                }
+            } catch (e) {
+                if (!collectedText) {
+                    textBubble.style.display = 'block';
+                    textBubble.textContent = '';
+                    textBubble.innerHTML = `<span style="color:#ef4444">❌ ${escapeHtml(e.message)}</span>`;
+                }
+            } finally {
+                // Finalize: render full markdown, remove streaming cursor
+                textBubble.classList.remove('streaming');
+                if (collectedText) {
+                    textBubble.innerHTML = renderMarkdown(collectedText);
+                    addCodeCopyButtons(textBubble);
+                }
+                if (toolCallsLog.length > 0) {
+                    toolSummary.textContent = `🔧 Used ${toolCallsLog.length} tool(s) — click to expand`;
+                } else {
+                    toolSummary.style.display = 'none';
+                }
+                clearStatus();
+                scrollToBottom();
+            }
+        }
+
+        /* ── Streaming UI helpers ─────────────────────────────────── */
+
+        function createStreamingMessage() {
+            const container = document.getElementById('messagesContainer');
+            const div = document.createElement('div');
+            div.className = 'message agent';
+
+            const toolSummary = document.createElement('div');
+            toolSummary.className = 'tool-calls-summary';
+            toolSummary.style.display = 'none';
+
+            const toolContainer = document.createElement('div');
+            toolContainer.className = 'tool-calls-container';
+
+            const textBubble = document.createElement('div');
+            textBubble.className = 'message-bubble streaming';
+            textBubble.style.display = 'none';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = '🤖';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.appendChild(toolSummary);
+            content.appendChild(toolContainer);
+            content.appendChild(textBubble);
+
+            div.appendChild(avatar);
+            div.appendChild(content);
+            container.appendChild(div);
+            scrollToBottom();
+
+            return { messageDiv: div, toolContainer, textBubble, toolSummary };
+        }
+
+        function insertStreamingToolCard(container, toolName, args, cardId) {
+            const card = document.createElement('div');
+            card.className = 'tool-call-card streaming-tool';
+            card.id = cardId;
+            card.onclick = () => card.classList.toggle('expanded');
+
+            const argsStr = JSON.stringify(args || {});
+            const shortArgs = argsStr.length > 40 ? argsStr.substring(0, 40) + '...' : argsStr;
+
+            card.innerHTML = `
+                <div class="tool-call-header">
+                    <div class="tool-spinner"></div>
+                    <span class="name">${escapeHtml(toolName)}</span>
+                    <span class="args">${escapeHtml(shortArgs)}</span>
+                </div>
+                <div class="tool-call-result"></div>
+            `;
+            container.appendChild(card);
+            return card;
+        }
+
+        function updateStreamingToolCard(card, result, success) {
+            card.classList.remove('streaming-tool');
+            if (!success) card.classList.add('error');
+
+            const header = card.querySelector('.tool-call-header');
+            const spinner = header.querySelector('.tool-spinner');
+            if (spinner) {
+                const icon = document.createElement('span');
+                icon.className = 'tool-status-icon';
+                icon.textContent = success ? '✅' : '❌';
+                spinner.replaceWith(icon);
+            }
+
+            const resultDiv = card.querySelector('.tool-call-result');
+            if (resultDiv && result) {
+                resultDiv.textContent = result;
+            }
+        }
+
+        function typewriterAppend(bubble, text) {
+            // Append raw text during streaming (will be replaced with markdown on 'done')
+            const span = document.createElement('span');
+            span.textContent = text;
+            bubble.appendChild(span);
+        }
+
+        /* ── Markdown Rendering ───────────────────────────────────── */
+
+        function renderMarkdown(text) {
+            if (!text) return '';
+            if (typeof marked === 'undefined') return escapeHtml(text);
+
+            // Configure marked with syntax highlighting
+            const renderer = new marked.Renderer();
+            const originalCode = renderer.code.bind(renderer);
+            renderer.code = function(code, language) {
+                let highlighted;
+                if (typeof hljs !== 'undefined' && language && hljs.getLanguage(language)) {
+                    try { highlighted = hljs.highlight(code, { language }).value; } catch(e) { highlighted = escapeHtml(code); }
+                } else if (typeof hljs !== 'undefined') {
+                    try { highlighted = hljs.highlightAuto(code).value; } catch(e) { highlighted = escapeHtml(code); }
+                } else {
+                    highlighted = escapeHtml(code);
+                }
+                const langLabel = language ? `<div class="code-lang-label">${escapeHtml(language)}</div>` : '';
+                return `<pre>${langLabel}<code class="hljs ${language || ''}">${highlighted}</code></pre>`;
+            };
+
+            marked.setOptions({ renderer, breaks: true, gfm: true });
+
+            let html = marked.parse(text);
+
+            // Sanitize to prevent XSS
+            if (typeof DOMPurify !== 'undefined') {
+                html = DOMPurify.sanitize(html, {
+                    ADD_TAGS: ['div'],
+                    ADD_ATTR: ['class', 'style'],
+                });
+            }
+
+            return html;
+        }
+
+        function addCodeCopyButtons(container) {
+            container.querySelectorAll('pre').forEach(pre => {
+                if (pre.querySelector('.code-copy-btn')) return;
+                const btn = document.createElement('button');
+                btn.className = 'code-copy-btn';
+                btn.textContent = '📋 Copy';
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const code = pre.querySelector('code');
+                    const text = code ? code.textContent : pre.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        btn.textContent = '✓ Copied!';
+                        btn.classList.add('copied');
+                        setTimeout(() => {
+                            btn.textContent = '📋 Copy';
+                            btn.classList.remove('copied');
+                        }, 2000);
+                    });
+                };
+                pre.style.position = 'relative';
+                pre.appendChild(btn);
+            });
         }
 
         /* ── Image helpers ────────────────────────────────────────── */
@@ -681,6 +1144,7 @@
                 </div>
             `;
             container.appendChild(div);
+            addCodeCopyButtons(div);
             scrollToBottom();
         }
 
@@ -705,29 +1169,13 @@
         }
 
         /**
-         * Render agent text:
-         * - Converts markdown images  ![alt](url)  to <img> with lightbox
-         * - Converts data URIs in text to inline images
-         * - Escapes the rest of the text safely
+         * Render agent text with full markdown support.
+         * Uses renderMarkdown() for rich formatting (headers, code, tables, etc.)
+         * Falls back to escapeHtml if markdown libs aren't loaded.
          */
         function renderAgentText(text) {
             if (!text) return '';
-            // Split on markdown image syntax: ![alt](url)
-            const parts = text.split(/(!\[([^\]]*)\]\((data:image\/[^)]+|https?:\/\/[^)]+)\))/g);
-            let html = '';
-            for (let i = 0; i < parts.length; i++) {
-                if (i % 4 === 0) {
-                    // Plain text segment
-                    html += escapeHtml(parts[i]);
-                } else if (i % 4 === 1) {
-                    // Full match — render as clickable image
-                    const alt = parts[i + 1] || 'image';
-                    const src = parts[i + 2] || '';
-                    html += `<div class="bubble-images"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" onclick="openLightbox('${escapeHtml(src)}')" style="max-width:260px;border-radius:10px;cursor:pointer;"></div>`;
-                    i += 2; // skip alt and src groups
-                }
-            }
-            return html || escapeHtml(text);
+            return renderMarkdown(text);
         }
 
         function autoResize(el) {

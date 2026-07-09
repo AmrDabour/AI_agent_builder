@@ -1194,7 +1194,8 @@ select option {
     cursor: pointer;
     transition: background 0.15s;
     font-size: 0.82rem;
-    color: var(--text-primary);
+    color: #f0f0f5 !important;
+    min-height: 32px;
 }
 
 .picker-item:hover { background: rgba(255,255,255,0.06); }
@@ -1204,10 +1205,33 @@ select option {
     width: 14px;
     height: 14px;
     flex-shrink: 0;
+    margin: 0;
 }
 
-.picker-item-name { color: #f0f0f5; font-weight: 500; }
-.picker-item-meta { color: #8888a0; font-size: 0.72rem; margin-left: auto; }
+.picker-item span {
+    display: inline;
+    visibility: visible;
+    opacity: 1;
+    color: #f0f0f5 !important;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.picker-item-name {
+    color: #f0f0f5 !important;
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.picker-item-meta {
+    color: #8888a0 !important;
+    font-size: 0.72rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
 
 .picker-item .badge-config {
     font-size: 0.62rem;
